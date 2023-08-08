@@ -228,6 +228,22 @@ NS_INLINE UIViewController *rootViewController(void) {
   NSAssert(self, @"super init cannot be nil");
 
   AVAsset *asset = [item asset];
+  NSString *urlString = nil;
+  if ([asset isKindOfClass:[AVURLAsset class]]) {
+    AVURLAsset *urlAsset = (AVURLAsset *)asset;
+    urlString = urlAsset.URL.lastPathComponent;
+  }
+  BOOL isLoopURL = (urlString && [urlString rangeOfString:@"loop" options:NSCaseInsensitiveSearch].location != NSNotFound);
+
+  if (isLoopURL) {
+    CMTimeRange timeRange = CMTimeRangeMake(CMTimeMake(0, 1), CMTimeMake(asset.duration.value, asset.duration.timescale));
+    AVMutableComposition *mutableComposition = [AVMutableComposition composition];
+    for (int i = 0; i < 500; i++) {
+        [mutableComposition insertTimeRange:timeRange ofAsset:asset atTime:mutableComposition.duration error:nil];
+    }
+    item = [[AVPlayerItem alloc] initWithAsset:mutableComposition];
+    asset = [item asset];
+  }
   void (^assetCompletionHandler)(void) = ^{
     if ([asset statusOfValueForKey:@"tracks" error:nil] == AVKeyValueStatusLoaded) {
       NSArray *tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
